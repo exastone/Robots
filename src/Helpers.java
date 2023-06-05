@@ -8,7 +8,7 @@ public class Helpers {
 		for (int i = 0; i < grid.size(); i++) {
 			System.out.print(" " + i);
 			if (i == grid.size() - 1) {
-				System.out.println(" \t-> x");
+				System.out.println(" \t-> y");
 			}
 		}
 		IntStream.range(0, grid.size()).forEach(rowIdx -> {
@@ -18,7 +18,7 @@ public class Helpers {
 				if (colIdx == row.size() - 1) {
 					System.out.print("|" + cell + "| " + rowIdx);
 					if (rowIdx == 0) {
-						System.out.print(" ↓ y");
+						System.out.print(" ↓ x");
 					}
 				} else {
 					System.out.print("|" + cell);
