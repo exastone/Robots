@@ -16,25 +16,26 @@ class Robot implements Runnable {
 	}
 
 	// update x,y position based on the direction then add the move to the positionHistory
-	private void move(char move) {
-		switch (move) {
+	private void move() {
+		switch (this.direction) {
 			case 'U' -> {
-				y--;
-				positionHistory.add(List.of(x, y));
-			}
-			case 'L' -> {
 				x--;
 				positionHistory.add(List.of(x, y));
 			}
-			case 'D' -> {
-				y++;
+			case 'L' -> {
+				y--;
 				positionHistory.add(List.of(x, y));
 			}
-			case 'R' -> {
+			case 'D' -> {
 				x++;
 				positionHistory.add(List.of(x, y));
 			}
+			case 'R' -> {
+				y++;
+				positionHistory.add(List.of(x, y));
+			}
 		}
+		moveHistory.add(this.direction);
 		if (verbose) {
 			System.out.println("Thread " + Thread.currentThread().getId() + ": " + "Robot moved to (" + x + "," + y + ")");
 		}
