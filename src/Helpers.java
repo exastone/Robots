@@ -27,6 +27,26 @@ public class Helpers {
 			System.out.println();
 		});
 	}
+	public static void printBothView(List<List<Character>> grid) {
+		System.out.println("[Room View]");
+		Helpers.printGrid(grid);
+		System.out.println("[Room View w/ robots]");
+		Helpers.printGrid(RobotVacuumSimulator.getInstance().returnRobotsInGrid(grid));
+	}
 
+	//	checks if all tiles in grid have same character
+	public static boolean checkGrid(List<List<Character>> grid, char c) {
+		boolean allSame = false;
+		for (var row : grid) {
+			for (var col : row) {
+				if (col != c) {
+					break;
+				} else {
+					allSame = true;
+				}
+			}
+		}
+		return allSame;
+	}
 
 }

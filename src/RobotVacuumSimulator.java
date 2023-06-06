@@ -6,60 +6,69 @@ public class RobotVacuumSimulator {
 	private static int roomSize;
 	private static List<Robot> robots;
 	private static List<List<Character>> room;
-	private static boolean verbose = true;
 	private static RobotVacuumSimulator instance;
 
-	private RobotVacuumSimulator() {
-		// Private constructor to prevent direct instantiation
-	}
+	// Private constructor to prevent direct instantiation
+	private RobotVacuumSimulator() {}
+
 	public static synchronized RobotVacuumSimulator getInstance() {
-		if (instance == null) {
-			instance = new RobotVacuumSimulator();
-		}
+		if (instance == null) {instance = new RobotVacuumSimulator();}
 		return instance;
 	}
 
-	/* Getters */
-	public List<List<Character>> getRoom() {
-		return room;
-	}
+	public List<List<Character>> getRoom() {return room;}
+	public int getRoomSize() {return roomSize;}
+	public List<Robot> getRobots() {return robots;}
 
-	public List<Robot> getRobots() {
-		return robots;
+	public static boolean checkOneRobotPerCell() {
+		int n = robots.size();
+		for (int i = 0; i < n - 1; i++) {
+			Robot robotA = robots.get(i);
+			for (int j = i + 1; j < n; j++) {
+				Robot robotB = robots.get(j);
+				if (robotA.x == robotB.x && robotA.y == robotB.y) {
+					return false; // Found duplicate coordinates
+				}
+			}
+		}
+		return true; // No duplicate coordinates found
 	}
-
 
 	/*This method is called once at the beginning of the simulation
 	 * the program is initialized by reading room.txt and robots.txt
 	 * then creates the room grid with createRoom()  */
-	public void init(String... args) {
+	public void init() {
 		String roomFile = "room.txt";
 		String robotsFile = "robots.txt";
-//		String robotsFile = "1robot.txt";
+		//		String robotsFile = "1robot.txt";
 
 		try {
 			roomSize = ReadFile.readRoomFile(roomFile);
 			robots = ReadFile.readRobotsFile(robotsFile);
-			robots.add(createCenterRobot());
-			room = createRoom();
+			//  Create robot at centre of room
+			robots.add(new Robot(roomSize / 2, roomSize / 2, 'U'));
 
-			if (verbose) {
-				System.out.println("[Room Initialized]");
-				Helpers.printGrid(room);
+			if (!checkOneRobotPerCell()) {
+				System.out.println("Error: Multiple robots in the same cell");
+				System.exit(1);
 			}
+
+			room = createRoom();
+			System.out.println("[Room Initialized]");
+			Helpers.printGrid(room);
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	// function to create room grid initialized with '*' to represent dirty tiles
+	// function to create room grid initialized with '.' to represent dirty tiles
 	private List<List<Character>> createRoom() {
 		room = new ArrayList<>();
 		for (int x = 0; x < roomSize; x++) {
 			List<Character> row = new ArrayList<>();
 			for (int y = 0; y < roomSize; y++) {
-				row.add('*');
+				row.add('.');
 			}
 			room.add(row);
 		}
@@ -68,76 +77,76 @@ public class RobotVacuumSimulator {
 
 	//	function to print the current position of robots in the room
 	public void printRobots() {
-		for (Robot robot : robots) {
-			System.out.println("Robot at (" + robot.x + "," + robot.y + ") facing " + robot.direction);
-		}
+		robots.forEach(robot -> System.out.println("Robot (" + robot.x + "," + robot.y + ") facing " + robot.getDirection()));
 	}
 
-	//	function to create a robot at the center of the room with initial direction 'U'
-	private Robot createCenterRobot() {
-		int x = roomSize / 2;
-		int y = roomSize / 2;
-		char direction = 'U';
-		return (new Robot(x, y, direction));
+	public synchronized void cleanTile(int x, int y) {room.get(x).set(y, '✓');}
+
+	// Return a grid populated robots at their current positions
+	public List<List<Character>> returnRobotsInGrid(List<List<Character>> grid) {
+		robots.forEach(robot -> grid.get(robot.x).set(robot.y, robot.getDirection()));
+		return grid;
 	}
 
-	public List<List<Character>> updateRobots(List<List<Character>> grid) {
-		List<List<Character>> room = grid;
-		// Populate the room with robots
-		for (Robot robot : robots) {
-			room.get(robot.x-1).set(robot.y-1, robot.direction);
-		}
-		if (verbose) {
-			System.out.println("[Positions Updated]");
-			Helpers.printGrid(room);
-		}
-		return room;
-	}
-
-	public synchronized void cleanTile(int x, int y) {
-		room.get(x).set(y, '✓');
-	}
 
 	public void simulate() {
 		List<Thread> threads = new ArrayList<>();
 
-		for (Robot robot : robots) {
-			Thread thread = new Thread(() -> simulateRobot(robot));
-			threads.add(thread);
-			thread.start();
-		}
+		//	TODO: change for loop to while loop with condition of room not clean
+		for (int i = 0; i < 10; i++) {
+			for (Robot robot : robots) {
+				Thread thread = new Thread(() -> simulateRobot(robot));
+				threads.add(thread);
+				thread.start();
+			}
 
-		// Wait for all threads to complete
-		for (Thread thread : threads) {
-			try {
-				thread.join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} finally {
-				updateRobots(room);
+			// Wait for all threads to complete
+			for (Thread thread : threads) {
+				try {
+					thread.join();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				} finally {
+					checkForCollision();
+				}
 			}
 		}
-		if (verbose) {
-			System.out.println("[Room Updated]");
-			Helpers.printGrid(room);
+		if (Helpers.checkGrid(room, '✓')) {
+			System.out.println("ROOM CLEAN");
+		}
+
+		System.out.println("\n---End of simulation---\nPrinting final state of room:");
+		Helpers.printBothView(returnRobotsInGrid(room));
+	}
+
+	/* If two vacuums occupy the same cell at any iteration of the algorithm,
+	 * then the program should terminate and output to standard output the following message:
+	 * "COLLISION AT CELL (m,n)" */
+	private void checkForCollision() {
+		int n = robots.size();
+		for (int i = 0; i < n - 1; i++) {
+			Robot robotA = robots.get(i);
+			for (int j = i + 1; j < n; j++) {
+				Robot robotB = robots.get(j);
+				if (robotA.x == robotB.x && robotA.y == robotB.y) {
+					System.out.println("Throwing exception... display final state of room:");
+					Helpers.printBothView(returnRobotsInGrid(room));
+					throw new IllegalStateException("Collision detected at (" + robotA.x + "," + robotA.y + ")");
+				}
+			}
 		}
 	}
 
 	public void simulateRobot(Robot robot) {
-
 		try {
-			if (verbose) {
-				System.out.println("Thread " + Thread.currentThread().getId() + " is cleaning tile (" + robot.x + "," + robot.y + ")");
-			}
-			Thread.sleep(2000);
+			Thread.sleep(50);
 			robot.run();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
-			if (verbose) {
-				System.out.println("Thread " + Thread.currentThread().getId() + " is done.");
-			}
+
 		}
 	}
+
 }
 
