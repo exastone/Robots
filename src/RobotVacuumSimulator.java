@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class RobotVacuumSimulator {
 	private static int roomSize;
@@ -9,7 +10,7 @@ public class RobotVacuumSimulator {
 	private static RobotVacuumSimulator instance;
 
 	/* Private constructor to prevent direct instantiation.
-	 * this is required to enforce synchronized block cleanTile() among threads  */
+	 * required to enforce synchronized block cleanTile() and used by Helpers class  */
 	private RobotVacuumSimulator() {}
 
 	public static synchronized RobotVacuumSimulator getInstance() {
@@ -36,13 +37,12 @@ public class RobotVacuumSimulator {
 		return true; // No duplicate coordinates found
 	}
 
-	/*This method is called once at the beginning of the simulation
+	/* This method is called once at the beginning of the simulation
 	 * the program is initialized by reading room.txt and robots.txt
 	 * then creates the room grid with createRoom()  */
 	public void init() {
 		String roomFile = "room.txt";
-		// String robotsFile = "robot.txt";
-		String robotsFile = "robots3.txt";
+		String robotsFile = "robots.txt";
 
 		try {
 			roomSize = ReadFile.readRoomFile(roomFile);
@@ -59,7 +59,7 @@ public class RobotVacuumSimulator {
 			System.out.println("[Room Initialized]");
 			Helpers.printGrid(room);
 			System.out.println("[Starting Position of Robots]");
-			Helpers.printGrid(returnRobotsInGrid(room));
+			Helpers.printGrid(Helpers.returnRobotsInGrid(room));
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -79,70 +79,69 @@ public class RobotVacuumSimulator {
 		return room;
 	}
 
-	//	function to print the current position of robots in the room
-	public void printRobots() {
-		robots.forEach(robot -> System.out.println("Robot (" + robot.x + "," + robot.y + ") facing " + robot.getDirection()));
-	}
-
 	//	Cleaning tile marks room grid with '✓'
 	public synchronized void cleanTile(int x, int y) {room.get(x).set(y, '✓');}
 
-	// Return a grid populated robots at their current positions
-	public List<List<Character>> returnRobotsInGrid(List<List<Character>> grid) {
-		robots.forEach(robot -> grid.get(robot.x).set(robot.y, robot.getDirection()));
-		return grid;
-	}
-
 	// Main simulation loop
 	public void simulate() {
-		List<Thread> threads = new ArrayList<>();
-
 		boolean ROOM_CLEAN = false;
 		int i = 0;
-
 		/* Keep running until all tiles are clean or until sufficient iterations have passed.
 		 * Since there is a robot created at center of room the max number of iterations
 		 * required to clean room is equal to size of room */
-		while (!ROOM_CLEAN || i >= roomSize * roomSize) {
+		while (!ROOM_CLEAN && i < roomSize * roomSize) {
+			List<Thread> threads = new ArrayList<>();
+			//	CountDownLatch is used to wait for all threads to complete before checking for collision
+			CountDownLatch latch = new CountDownLatch(robots.size());
+
 			for (Robot robot : robots) {
-				Thread thread = new Thread(() -> simulateRobot(robot));
+				Thread thread = new Thread(() -> {
+					simulateRobot(robot);
+					latch.countDown(); // Signal completion of work
+				});
 				threads.add(thread);
 				thread.start();
 			}
 
-			// Wait for all threads to complete
-			for (Thread thread : threads) {
-				try {
-					thread.join();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				} finally {
-					checkForCollision();
-				}
+			try {
+				latch.await(); // Wait for all threads to complete
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
-			if (ROOM_CLEAN = Helpers.checkGrid(room, '✓')) {
-				System.out.println("\n--- ROOM CLEAN after " + i + " cycles ---");
+
+			checkForCollision(i);
+
+			/*  May be used to print grid after each iteration for debugging/inspection
+				Helpers.printGrid(Helpers.returnRobotsInGrid(room)); */
+
+			if (Helpers.checkGrid(room, '✓')) {
+				ROOM_CLEAN = true;
+				System.out.println("--- ROOM CLEAN after " + i + " loop iterations ---");
 			}
 			i++;
 		}
 
-		System.out.println("\n---End of simulation---\nPrinting final state of room:");
-		Helpers.printBothView(returnRobotsInGrid(room));
+		System.out.println("\n---End of simulation---\nPrinting final state of room after " + (i - 1) + " loop iterations:");
+		Helpers.printBothView(room);
+		System.out.println("Final position of robots:");
+		Helpers.printRobots();
 	}
 
-	/* If two vacuums occupy the same cell at any iteration of the algorithm,
-	 * then the program should terminate and output to standard output the following message:
+	/* If two robots occupy the same cell at any iteration of the algorithm, then the
+	 * program should terminate and output to standard output the following message:
 	 * "COLLISION AT CELL (m,n)" */
-	private void checkForCollision() {
+	private void checkForCollision(int loopCount) {
 		int n = robots.size();
 		for (int i = 0; i < n - 1; i++) {
 			Robot robotA = robots.get(i);
 			for (int j = i + 1; j < n; j++) {
 				Robot robotB = robots.get(j);
 				if (robotA.x == robotB.x && robotA.y == robotB.y) {
-					System.out.println("Throwing exception... display final state of room:");
-					Helpers.printBothView(returnRobotsInGrid(room));
-					throw new IllegalStateException("Collision detected at (" + robotA.x + "," + robotA.y + ")");
+					System.out.println("Throwing exception... displaying final state of room after " + loopCount + " iterations:");
+					Helpers.printBothView(room);
+					Helpers.printRobots();
+					// (y,x) === (horizontal, vertical)
+					throw new IllegalStateException("Collision detected at (" + robotA.y + "," + robotA.x + ") on loop iteration " + loopCount);
 				}
 			}
 		}
@@ -155,8 +154,6 @@ public class RobotVacuumSimulator {
 			robot.run();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		} finally {
-			// may place additional print statements here if needed for debugging
 		}
 	}
 
