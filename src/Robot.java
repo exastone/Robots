@@ -3,6 +3,7 @@ import java.util.*;
 class Robot implements Runnable {
 	int x, y;
 	int roomSize = RobotVacuumSimulator.getInstance().getRoomSize();
+	boolean boundaryHit = false;    // flag used to fall back to alternative movement
 	List<Character> moveHistory = new ArrayList<>();
 	List<Character> directionEnum = List.of('U', 'L', 'D', 'R');
 	int directionIndex;
@@ -20,7 +21,6 @@ class Robot implements Runnable {
 	public char getDirection() {return directionEnum.get(directionIndex);}
 
 	private void move() {
-
 		//	Calculate new position; if position is within bounds of room, move robot
 		int dummyX = x;
 		int dummyY = y;
@@ -37,21 +37,25 @@ class Robot implements Runnable {
 			movementsInDirection++;
 			moveHistory.add(getDirection());
 		} else {
-			// reset robot with new direction
-			movementsInDirection = 0;
-			distance = 1;
+			boundaryHit = true;
 			directionIndex = (directionIndex + 1) % directionEnum.size();
 		}
-
 	}
 
 	private void updateDirection() {
-		if (movementsInDirection == distance) {
-			directionIndex = (directionIndex + 1) % directionEnum.size();
+		// If robot has hit a wall, travel along walls in counterclockwise direction
+		if (boundaryHit) {
 			movementsInDirection = 0;
-
-			if (directionIndex % 2 == 0) {
-				distance++;
+			distance = 1;
+		} else {
+			// If robot has travelled distance in current direction, change direction
+			if (movementsInDirection == distance) {
+				directionIndex = (directionIndex + 1) % directionEnum.size();
+				movementsInDirection = 0;
+				// If robot has changed direction twice, increase distance
+				if (directionIndex % 2 == 0) {
+					distance++;
+				}
 			}
 		}
 	}
