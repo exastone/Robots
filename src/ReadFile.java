@@ -21,8 +21,9 @@ public class ReadFile {
 
 		for (int i = 0; i < numRobots; i++) {
 			String[] robotData = reader.readLine().split(" ");
-			int x = Integer.parseInt(robotData[0]);
-			int y = Integer.parseInt(robotData[1]);
+			// Note: y is horizontal axis, x is vertical axis
+			int y = Integer.parseInt(robotData[0]);
+			int x = Integer.parseInt(robotData[1]);
 			char direction = robotData[2].charAt(0);
 
 			robots.add(new Robot(x, y, direction));
