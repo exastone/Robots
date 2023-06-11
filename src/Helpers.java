@@ -1,6 +1,7 @@
 import java.util.List;
 import java.util.stream.IntStream;
 
+// Helper functions
 public class Helpers {
 
 	// Provided a 2D grid, prints the grid to the console
@@ -27,6 +28,8 @@ public class Helpers {
 			System.out.println();
 		});
 	}
+
+	// Defined to reduce code duplication
 	public static void printBothView(List<List<Character>> grid) {
 		System.out.println("[Room View]");
 		Helpers.printGrid(grid);
@@ -34,19 +37,17 @@ public class Helpers {
 		Helpers.printGrid(RobotVacuumSimulator.getInstance().returnRobotsInGrid(grid));
 	}
 
-	//	checks if all tiles in grid have same character
+	// Check if all tiles in grid have same character
 	public static boolean checkGrid(List<List<Character>> grid, char c) {
-		boolean allSame = false;
-		for (var row : grid) {
-			for (var col : row) {
-				if (col != c) {
-					break;
-				} else {
-					allSame = true;
+		int size = grid.size();
+		for (int i = 0; i < size - 1; i++) {
+			for (int j = 0; j < size - 1; j++) {
+				if (grid.get(i).get(j) != c) {
+					return false;
 				}
 			}
 		}
-		return allSame;
+		return true;
 	}
 
 }

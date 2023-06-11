@@ -5,13 +5,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ReadFile {
+	// Read room file and return room size
 	public static int readRoomFile(String filename) throws IOException {
 		BufferedReader reader = new BufferedReader(new FileReader(filename));
 		String line = reader.readLine();
 		reader.close();
-
 		return Integer.parseInt(line);
 	}
+
+	// Read robots file and return list of robots
 	public static List<Robot> readRobotsFile(String filename) throws IOException {
 		BufferedReader reader = new BufferedReader(new FileReader(filename));
 		int numRobots = Integer.parseInt(reader.readLine());

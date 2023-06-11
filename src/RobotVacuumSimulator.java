@@ -8,7 +8,8 @@ public class RobotVacuumSimulator {
 	private static List<List<Character>> room;
 	private static RobotVacuumSimulator instance;
 
-	// Private constructor to prevent direct instantiation
+	/* Private constructor to prevent direct instantiation.
+	 * this is required to enforce synchronized block cleanTile() among threads  */
 	private RobotVacuumSimulator() {}
 
 	public static synchronized RobotVacuumSimulator getInstance() {
@@ -19,6 +20,7 @@ public class RobotVacuumSimulator {
 	public List<List<Character>> getRoom() {return room;}
 	public int getRoomSize() {return roomSize;}
 	public List<Robot> getRobots() {return robots;}
+	private final int THREAD_SLEEP_TIME = 50;   // Change to whatever you want
 
 	public static boolean checkOneRobotPerCell() {
 		int n = robots.size();
@@ -39,8 +41,8 @@ public class RobotVacuumSimulator {
 	 * then creates the room grid with createRoom()  */
 	public void init() {
 		String roomFile = "room.txt";
-		String robotsFile = "robots.txt";
-		//		String robotsFile = "1robot.txt";
+		// String robotsFile = "robot.txt";
+		String robotsFile = "robots3.txt";
 
 		try {
 			roomSize = ReadFile.readRoomFile(roomFile);
@@ -56,6 +58,8 @@ public class RobotVacuumSimulator {
 			room = createRoom();
 			System.out.println("[Room Initialized]");
 			Helpers.printGrid(room);
+			System.out.println("[Starting Position of Robots]");
+			Helpers.printGrid(returnRobotsInGrid(room));
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -80,6 +84,7 @@ public class RobotVacuumSimulator {
 		robots.forEach(robot -> System.out.println("Robot (" + robot.x + "," + robot.y + ") facing " + robot.getDirection()));
 	}
 
+	//	Cleaning tile marks room grid with '✓'
 	public synchronized void cleanTile(int x, int y) {room.get(x).set(y, '✓');}
 
 	// Return a grid populated robots at their current positions
@@ -88,12 +93,17 @@ public class RobotVacuumSimulator {
 		return grid;
 	}
 
-
+	// Main simulation loop
 	public void simulate() {
 		List<Thread> threads = new ArrayList<>();
 
-		//	TODO: change for loop to while loop with condition of room not clean
-		for (int i = 0; i < 10; i++) {
+		boolean ROOM_CLEAN = false;
+		int i = 0;
+
+		/* Keep running until all tiles are clean or until sufficient iterations have passed.
+		 * Since there is a robot created at center of room the max number of iterations
+		 * required to clean room is equal to size of room */
+		while (!ROOM_CLEAN || i >= roomSize * roomSize) {
 			for (Robot robot : robots) {
 				Thread thread = new Thread(() -> simulateRobot(robot));
 				threads.add(thread);
@@ -110,9 +120,10 @@ public class RobotVacuumSimulator {
 					checkForCollision();
 				}
 			}
-		}
-		if (Helpers.checkGrid(room, '✓')) {
-			System.out.println("ROOM CLEAN");
+			if (ROOM_CLEAN = Helpers.checkGrid(room, '✓')) {
+				System.out.println("\n--- ROOM CLEAN after " + i + " cycles ---");
+			}
+			i++;
 		}
 
 		System.out.println("\n---End of simulation---\nPrinting final state of room:");
@@ -137,14 +148,15 @@ public class RobotVacuumSimulator {
 		}
 	}
 
+	// Wrapper around robot.run()
 	public void simulateRobot(Robot robot) {
 		try {
-			Thread.sleep(50);
+			Thread.sleep(THREAD_SLEEP_TIME);
 			robot.run();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
-
+			// may place additional print statements here if needed for debugging
 		}
 	}
 

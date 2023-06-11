@@ -10,6 +10,7 @@ class Robot implements Runnable {
 	int distance = 1;
 	int movementsInDirection = 0;
 
+	// Constructor
 	public Robot(int x, int y, char direction) {
 		this.x = x;
 		this.y = y;
@@ -19,6 +20,8 @@ class Robot implements Runnable {
 	public char getDirection() {return directionEnum.get(directionIndex);}
 
 	private void move() {
+
+		//	Calculate new position; if position is within bounds of room, move robot
 		int dummyX = x;
 		int dummyY = y;
 		switch (directionEnum.get(directionIndex)) {
@@ -53,6 +56,7 @@ class Robot implements Runnable {
 		}
 	}
 
+	// Thread Task
 	@Override
 	public void run() {
 		RobotVacuumSimulator simulator = RobotVacuumSimulator.getInstance();
