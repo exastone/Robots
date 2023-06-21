@@ -1,4 +1,4 @@
-## Multi-threaded Robot Room Cleaning Exercise
+## Multi-threaded Java Exercise
 
 Goal is to simulate a fleet of (dumb) robot vaccums cleaning a room as an execise of multi-threaded synchronization.
 
